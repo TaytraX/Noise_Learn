@@ -1,5 +1,6 @@
 package Core;
 
+import Render.SmockRender;
 import Render.Window;
 import org.joml.Vector2f;
 
@@ -12,6 +13,7 @@ import static org.lwjgl.glfw.GLFW.glfwTerminate;
 
 public class Engine {
     public Window window;
+    public SmockRender Smock;
     public boolean isRunning;
     private long lastTime = System.currentTimeMillis();
     private float deltaTime = 0.000016f;
@@ -26,11 +28,13 @@ public class Engine {
         try {
             // Vérification critique
             window = Main.getWindow();
+            Smock = new SmockRender();
             if(window == null) {
                 throw new Exception("Window not initialized");
             }
 
             window.init();
+            Smock.init();
 
         } catch (Exception e) {
             System.exit(1); // Arrêt propre au lieu de crash
@@ -40,6 +44,7 @@ public class Engine {
     public void render() {
         try {
             window.clear();
+            Smock.render();
             window.update();
         } catch (Exception e) { e.printStackTrace(); }
     }

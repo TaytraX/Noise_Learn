@@ -3,7 +3,7 @@ package Core;
 import java.util.Random;
 
 public class Noise {
-    private int[] permutation;
+    private final int[] permutation;
 
     public Noise(int seed) {
         permutation = new int[512];
