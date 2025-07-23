@@ -53,33 +53,49 @@ public class SmockRender {
                 float y2 = ((py + cellHeight) / height) * 2.0f - 1.0f;
 
                 // Coordonnées pour le noise (plus petites pour voir les patterns)
-                float nx = x * 0.05f; // Réduit pour voir les continents
-                float ny = y * 0.05f;
+                float nx = x * 0.8f; // Réduit pour voir les continents
+                float ny = y * 0.8f;
 
-                // **NOUVELLE GÉNÉRATION HYBRIDE**
+                // Dans setupMesh(), remplace toute la section génération par :
 
-                // 1. Cellular noise grande échelle pour les continents
-                float continentalNoise = cellular.cellularNoise(nx * 0.3f, ny * 0.3f, 0.1f);
+// **GÉNÉRATION DE VRAIS CONTINENTS**
 
-                // 2. Cellular noise moyenne échelle pour fragmenter
-                float regionalNoise = cellular.cellularNoise2(nx, ny, 7);
+                // 1. Noise continental ULTRA grande échelle - quelques grands blobs seulement
+                float continentalCore = cellular.cellularNoise(nx * 0.03f, ny * 0.03f, 0.02f);
 
-                // 3. Perlin pour les détails
-                float detailNoise = noise.fbm(nx * 4f, ny * 4f, 4, 2.0f, 0.5f);
 
-                // 4. Combiner pour obtenir le résultat final
-                float landMask = smoothstep(0.4f, 0.6f, continentalNoise); // Forme des continents
-                landMask *= smoothstep(-0.1f, 0.1f, regionalNoise); // Fragmentation
+                float continentalSupport = cellular.cellularNoise(nx * 0.05f + 100f, ny * 0.05f + 100f, 0.03f);
 
-                // Si c'est de la terre, ajouter les détails d'élévation
+                // 3. Combinaison multiplicative pour créer de GROS blobs
+                float baseLandmask = continentalCore * continentalSupport;
+
+                // 4. Seuil TRÈS permissif pour avoir de grandes zones
+                float mainLandmask = smoothstep(0.2f, 0.5f, baseLandmask);
+
+                // 5. Découpage côtier MINIMAL et SEULEMENT sur les bordures
+                float coastalDetail = cellular.cellularNoise2(nx * 0.6f, ny * 0.6f, 3);
+                float borderZone = smoothstep(0.8f, 0.95f, mainLandmask); // Seulement les bordures externes
+
+                // Appliquer le découpage côtier UNIQUEMENT sur une fine bande de bordure
+                float coastalModifier = 1.0f - (borderZone * Math.max(0f, -coastalDetail * 0.2f));
+                float finalLandmask = mainLandmask * coastalModifier;
+
+                // 6. Élévation avec variation interne
+                float detailNoise = noise.fbm(nx * 2f, ny * 2f, 3, 2.0f, 0.4f);
+
                 float finalHeight;
-                if (landMask > 0.3f) { // Terre
-                    finalHeight = 0.6f + (detailNoise * 0.4f * landMask);
-                } else { // Eau
-                    finalHeight = 0.2f + (detailNoise * 0.1f); // Variation océan
+                if (finalLandmask > 0.6f) { // Cœur continental - montagneux
+                    finalHeight = 0.7f + (detailNoise * 0.25f);
+                } else if (finalLandmask > 0.4f) { // Terres moyennes
+                    finalHeight = 0.55f + (detailNoise * 0.2f);
+                } else if (finalLandmask > 0.2f) { // Plaines côtières
+                    finalHeight = 0.45f + (detailNoise * 0.1f);
+                } else if (finalLandmask > 0.05f) { // Marécages/lagunes
+                    finalHeight = 0.32f + (detailNoise * 0.05f);
+                } else { // Océan
+                    finalHeight = 0.2f + (detailNoise * 0.03f);
                 }
 
-                // Clamp pour éviter les valeurs aberrantes
                 finalHeight = Math.max(0f, Math.min(1f, finalHeight));
 
                 // Premier triangle
