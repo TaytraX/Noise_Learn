@@ -5,7 +5,7 @@ import java.util.Random;
 public class Noise {
     private final int[] permutation;
 
-    public Noise(int seed) {
+    public Noise(long seed) {
         permutation = new int[512];
         int[] p = new int[256];
         Random rand = new Random(seed);
