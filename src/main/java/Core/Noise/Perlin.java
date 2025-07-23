@@ -1,11 +1,11 @@
-package Core;
+package Core.Noise;
 
 import java.util.Random;
 
-public class Noise {
+public class Perlin {
     private final int[] permutation;
 
-    public Noise(long seed) {
+    public Perlin(long seed) {
         permutation = new int[512];
         int[] p = new int[256];
         Random rand = new Random(seed);
