@@ -72,7 +72,7 @@ public class SmockRender {
 
         vertices.flip();
 
-        // Créer VAO et VBO
+        // Créer VAO et VBO gt
         VAO = glGenVertexArrays();
         VBO = glGenBuffers();
 
