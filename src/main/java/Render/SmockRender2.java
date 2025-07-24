@@ -13,9 +13,8 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
-public class SmockRender {
+public class SmockRender2 {
     private Perlin noise;
-    private Cellular cellular;
     private Shader shader;
     private int VAO, VBO;
     private int vertexCount;
@@ -24,7 +23,6 @@ public class SmockRender {
     public void init() {
         long worldSeed = seed.nextLong(); // Seed fixe pour tests, tu peux la randomiser
         noise = new Perlin(worldSeed);
-        cellular = new Cellular(worldSeed);
         shader = new Shader("terrain");
 
         setupMesh();
@@ -34,8 +32,8 @@ public class SmockRender {
     }
 
     private void setupMesh() {
-        int cols = 400;
-        int rows = 300;
+        int cols = 800;
+        int rows = 600;
         float cellWidth = width / (float) cols;
         float cellHeight = height / (float) rows;
 
@@ -56,50 +54,28 @@ public class SmockRender {
                 float nx = x * 0.8f; // Réduit pour voir les continents
                 float ny = y * 0.8f;
 
-                        // **GÉNÉRATION DE VRAIS CONTINENTS**
+                // **GÉNÉRATION AVEC PERLIN MODIFIÉ SEUL**
 
-                // 1. Base continentale avec Cellular (comme avant)
-                float continentalCore = cellular.cellularNoise(nx * 0.03f, ny * 0.03f, 0.025f);
-                float continentalSupport = cellular.cellularNoise(nx * 0.05f + 100f, ny * 0.05f + 100f, 0.035f);
+                // 1. TRÈS grande échelle pour définir les zones continentales
+                float continentalBase = noise.fbm(nx * 0.015f, ny * 0.015f, 2, 2.0f, 0.7f);
 
-                // 2. Perlin pour l'aspect "éparpillé" Minecraft
-                float perlinScatter = noise.fbm(nx * 0.08f, ny * 0.08f, 4, 2.0f, 0.5f);
+                // 2. Échelle moyenne pour la forme générale
+                float regionalShape = noise.fbm(nx * 0.04f, ny * 0.04f, 3, 2.0f, 0.6f);
 
-                // 3. Combinaison pondérée - AJUSTABLE selon vos préférences
-                float baseLandmask = (continentalCore * continentalSupport * 0.8f) + (perlinScatter * 0.2f);
+                // 3. Détails locaux
+                float localDetails = noise.fbm(nx * 0.12f, ny * 0.12f, 4, 2.0f, 0.4f);
 
-                // 4. Le reste reste identique
-                float mainLandmask = smoothstep(0.15f, 0.4f, baseLandmask);
+                // 4. Combinaison hiérarchique - le continental domine
+                float rawNoise = (continentalBase * 0.6f) + (regionalShape * 0.3f) + (localDetails * 0.1f);
 
+                // 5. Modification pour favoriser les grandes masses
+                float modifiedNoise = (float)Math.pow(rawNoise * 0.5f + 0.5f, 1.2f) * 2.0f - 1.0f;
 
-                // 5. Découpage côtier MINIMAL et SEULEMENT sur les bordures
-                float coastalDetail = cellular.cellularNoise2(nx * 0.6f, ny * 0.6f, 3);
-                float borderZone = smoothstep(0.8f, 0.95f, mainLandmask); // Seulement les bordures externes
-
-                // Appliquer le découpage côtier UNIQUEMENT sur une fine bande de bordure
-                float coastalModifier = 1.0f - (borderZone * Math.max(0f, -coastalDetail * 0.2f));
-                float finalLandmask = mainLandmask * coastalModifier;
-
-                // 6. Élévation avec variation interne
-                float detailNoise = noise.fbm(nx * 2f, ny * 2f, 3, 2.0f, 0.4f);
+                // 6. Seuils ajustés pour plus de connectivité
+                float finalLandmask = smoothstep(modifiedNoise);
 
                 float finalHeight;
-                if (finalLandmask > 0.5f) {         // Cœur continental (était 0.6f)
-                    finalHeight = 0.7f + (detailNoise * 0.25f);
-                } else if (finalLandmask > 0.3f) {  // Terres moyennes (était 0.4f)
-                    finalHeight = 0.55f + (detailNoise * 0.2f);
-                } else if (finalLandmask > 0.15f) { // Plaines côtières (était 0.2f)
-                    finalHeight = 0.45f + (detailNoise * 0.1f);
-                } else if (finalLandmask > 0.03f) { // Marécages (était 0.05f)
-                    finalHeight = 0.32f + (detailNoise * 0.05f);
-                } else {                            // Océan
-                    finalHeight = 0.2f + (detailNoise * 0.03f);
-                }
-
-                finalHeight = Math.max(0f, Math.min(1f, finalHeight));
-
-                // Premier triangle
-                vertices.put(x1).put(y1).put(finalHeight);
+                finalHeight = getFinalHeight(finalLandmask, localDetails, vertices, x1, y1);
                 vertices.put(x2).put(y1).put(finalHeight);
                 vertices.put(x1).put(y2).put(finalHeight);
 
@@ -129,9 +105,30 @@ public class SmockRender {
         glBindVertexArray(0);
     }
 
+    private static float getFinalHeight(float finalLandmask, float localDetails, FloatBuffer vertices, float x1, float y1) {
+        float finalHeight;
+        if (finalLandmask > 0.7f) {
+            finalHeight = 0.7f + (localDetails * 0.25f);
+        } else if (finalLandmask > 0.5f) {
+            finalHeight = 0.55f + (localDetails * 0.2f);
+        } else if (finalLandmask > 0.3f) {
+            finalHeight = 0.45f + (localDetails * 0.1f);
+        } else if (finalLandmask > 0.1f) {
+            finalHeight = 0.35f + (localDetails * 0.05f);
+        } else {
+            finalHeight = 0.2f + (localDetails * 0.03f);
+        }
+
+        finalHeight = Math.max(0f, Math.min(1f, finalHeight));
+
+        // Premier triangle
+        vertices.put(x1).put(y1).put(finalHeight);
+        return finalHeight;
+    }
+
     // Fonction utilitaire smoothstep pour des transitions douces
-    private float smoothstep(float edge0, float edge1, float x) {
-        x = Math.max(0f, Math.min(1f, (x - edge0) / (edge1 - edge0)));
+    private float smoothstep(float x) {
+        x = Math.max(0f, Math.min(1f, (x - (float) -0.2) / ((float) 0.2 - (float) -0.2)));
         return x * x * (3f - 2f * x);
     }
 
