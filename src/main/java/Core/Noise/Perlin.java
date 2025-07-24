@@ -45,6 +45,7 @@ public class Perlin {
         );
     }
 
+    // FBM classique [-1, 1] - CETTE FONCTION EST CORRECTE
     public float fbm(float x, float y, int octaves, float lacunarity, float gain) {
         float total = 0;
         float amplitude = 1;
@@ -60,6 +61,38 @@ public class Perlin {
 
         return total / maxAmplitude;
     }
+
+    // VERSION CORRIGÉE - Continental FBM [0, 1]
+    public float continentalFbm(float x, float y, int octaves, float lacunarity, float gain, float bias) {
+        float value = fbm(x, y, octaves, lacunarity, gain);
+
+        // CORRECTION : Appliquer le bias AVANT la normalisation
+        value = value + bias;
+
+        // Puis normaliser [-1,1] -> [0,1]
+        value = value * 0.5f + 0.5f;
+
+        return Math.max(0f, Math.min(1f, value));
+    }
+
+    // VERSION CORRIGÉE - Biased FBM [0, 1]
+    public float biasedFbm(float x, float y, int octaves, float lacunarity, float gain, float landBias) {
+        float value = fbm(x, y, octaves, lacunarity, gain);
+
+        // Normaliser d'abord vers [0,1]
+        value = value * 0.5f + 0.5f;
+
+        // Puis appliquer le bias de distribution
+        if (landBias > 0) {
+            value = (float)Math.pow(value, 1.0f - landBias * 0.5f); // Favorise les hautes valeurs
+        } else {
+            value = (float)Math.pow(value, 1.0f + Math.abs(landBias) * 0.5f); // Favorise les basses valeurs
+        }
+
+        return Math.max(0f, Math.min(1f, value));
+    }
+
+    // SUPPRIME ridgedFbm pour l'instant - pas utilisé et complexifie le debug
 
     private float fade(float t) {
         return t * t * t * (t * (t * 6 - 15) + 10);

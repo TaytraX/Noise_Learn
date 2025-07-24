@@ -21,7 +21,7 @@ public class SmockRender2 {
     Random seed = new Random();
 
     public void init() {
-        long worldSeed = seed.nextLong();
+        long worldSeed = seed.nextLong(); // Seed fixe pour tests, tu peux la randomiser
         noise = new Perlin(worldSeed);
         shader = new Shader("terrain");
 
@@ -74,8 +74,10 @@ public class SmockRender2 {
                 // 6. Seuils ajustés pour plus de connectivité
                 float finalLandmask = smoothstep(modifiedNoise);
 
-                float finalHeight;
-                finalHeight = getFinalHeight(finalLandmask, localDetails, vertices, x1, y1);
+                float finalHeight = getFinalHeight(finalLandmask, localDetails);
+
+                // Premier triangle
+                vertices.put(x1).put(y1).put(finalHeight);
                 vertices.put(x2).put(y1).put(finalHeight);
                 vertices.put(x1).put(y2).put(finalHeight);
 
@@ -105,7 +107,7 @@ public class SmockRender2 {
         glBindVertexArray(0);
     }
 
-    private static float getFinalHeight(float finalLandmask, float localDetails, FloatBuffer vertices, float x1, float y1) {
+    private static float getFinalHeight(float finalLandmask, float localDetails) {
         float finalHeight;
         if (finalLandmask > 0.7f) {
             finalHeight = 0.7f + (localDetails * 0.25f);
@@ -120,9 +122,6 @@ public class SmockRender2 {
         }
 
         finalHeight = Math.max(0f, Math.min(1f, finalHeight));
-
-        // Premier triangle
-        vertices.put(x1).put(y1).put(finalHeight);
         return finalHeight;
     }
 
