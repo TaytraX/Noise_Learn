@@ -50,7 +50,7 @@ public class SmockRender2 {
                 float x2 = ((px + cellWidth) / width) * 2.0f - 1.0f;
                 float y2 = ((py + cellHeight) / height) * 2.0f - 1.0f;
 
-                // Coordonnées pour le noise (plus petites pour voir les patterns)
+                // Coordonnées pour le bruit (plus petites pour voir les patterns)
                 float nx = x * 0.8f; // Réduit pour voir les continents
                 float ny = y * 0.8f;
 
@@ -65,11 +65,11 @@ public class SmockRender2 {
                 // 3. Détails locaux
                 float localDetails = noise.fbm(nx * 0.12f, ny * 0.12f, 4, 2.0f, 0.4f);
 
-                // 4. Combinaison hiérarchique - le continental domine
+                // 4. Combinaison hiérarchique_le continental domine
                 float rawNoise = (continentalBase * 0.6f) + (regionalShape * 0.3f) + (localDetails * 0.1f);
 
                 // 5. Modification pour favoriser les grandes masses
-                float modifiedNoise = (float)Math.pow(rawNoise * 0.5f + 0.5f, 1.2f) * 2.0f - 1.0f;
+                float modifiedNoise = applyLandBias(rawNoise); // 1.2f favorise les terres
 
                 // 6. Seuils ajustés pour plus de connectivité
                 float finalLandmask = smoothstep(modifiedNoise);
@@ -123,6 +123,18 @@ public class SmockRender2 {
 
         finalHeight = Math.max(0f, Math.min(1f, finalHeight));
         return finalHeight;
+    }
+
+    // Version plus claire et paramétrable
+    private float applyLandBias(float noise) {
+        // Normaliser vers [0,1]
+        float normalized = noise * 0.5f + 0.5f;
+
+        // Appliquer la courbe de puissance
+        float curved = (float)Math.pow(normalized, (float) 1.2);
+
+        // Retourner vers [-1,1]
+        return curved * 2.0f - 1.0f;
     }
 
     // Fonction utilitaire smoothstep pour des transitions douces
