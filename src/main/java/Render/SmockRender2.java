@@ -21,7 +21,7 @@ public class SmockRender2 {
     Random seed = new Random();
 
     public void init() {
-        long worldSeed = seed.nextLong(); // Seed fixe pour tests, tu peux la randomiser
+        long worldSeed = seed.nextLong();
         noise = new Perlin(worldSeed);
         shader = new Shader("terrain");
 
