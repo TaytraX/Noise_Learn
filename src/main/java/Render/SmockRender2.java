@@ -130,8 +130,8 @@ public class SmockRender2 {
         // Normaliser vers [0,1]
         float normalized = noise * 0.5f + 0.5f;
 
-        // Appliquer la courbe de puissance
-        float curved = (float)Math.pow(normalized, (float) 1.2);
+        // Plus l'exposant est petit, plus il y aura d'eau
+        float curved = (float)Math.pow(normalized, 1.17f);
 
         // Retourner vers [-1,1]
         return curved * 2.0f - 1.0f;
